@@ -60,7 +60,7 @@
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     ignoreNoFilesFound: false) ~> moviesdbsrc",
-				"moviesrc derive(titlenew = toStirng(left(title,length(title)-6))) ~> cleaningmovies",
+				"moviesrc derive(titleNew = toString((left(title,length(title)-6)))) ~> cleaningmovies",
 				"cleaningmovies, moviesdbsrc join(titlenew == moviesdbsrc@title,",
 				"     joinType:'left',",
 				"     matchType:'exact',",
