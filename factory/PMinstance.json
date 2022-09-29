@@ -1,0 +1,9 @@
+{
+	"name": "PMinstance",
+	"location": "centralindia",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "e548ee7d-a679-43ad-bc49-5439ad21e2ef",
+		"tenantId": "5edffc40-ea6a-4169-b6f4-ff40321b93c2"
+	}
+}
