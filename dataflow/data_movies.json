@@ -19,13 +19,25 @@
 					"name": "moviesdbsrc"
 				}
 			],
-			"sinks": [],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "moviesoutput",
+						"type": "DatasetReference"
+					},
+					"name": "moviesoutput",
+					"description": "expo"
+				}
+			],
 			"transformations": [
 				{
 					"name": "cleaningmovies"
 				},
 				{
-					"name": "join1"
+					"name": "joinmovies"
+				},
+				{
+					"name": "select1"
 				}
 			],
 			"scriptLines": [
@@ -49,11 +61,29 @@
 				"     validateSchema: false,",
 				"     ignoreNoFilesFound: false) ~> moviesdbsrc",
 				"moviesrc derive(titlenew = toStirng(left(title,length(title)-6))) ~> cleaningmovies",
-				"cleaningmovies join(ERROR_FUNCTION('') == ERROR_FUNCTION(''),",
-				"     joinType:'inner',",
+				"cleaningmovies, moviesdbsrc join(titlenew == moviesdbsrc@title,",
+				"     joinType:'left',",
 				"     matchType:'exact',",
 				"     ignoreSpaces: false,",
-				"     broadcast: 'auto')~> join1"
+				"     broadcast: 'auto')~> joinmovies",
+				"joinmovies select(mapColumn(",
+				"          movieId,",
+				"          title = moviesrc@title,",
+				"          genres = moviesrc@genres,",
+				"          titlenew,",
+				"          movie,",
+				"          title = moviesdbsrc@title,",
+				"          genres = moviesdbsrc@genres,",
+				"          year,",
+				"          Rating,",
+				"          RottenTomato",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"select1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> moviesoutput"
 			]
 		}
 	}
