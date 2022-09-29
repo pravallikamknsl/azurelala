@@ -72,7 +72,6 @@
 				"          genres = moviesrc@genres,",
 				"          titlenew,",
 				"          movie,",
-				"          title = moviesdbsrc@title,",
 				"          genres = moviesdbsrc@genres,",
 				"          year,",
 				"          Rating,",
