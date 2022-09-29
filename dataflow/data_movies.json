@@ -13,7 +13,11 @@
 				}
 			],
 			"sinks": [],
-			"transformations": [],
+			"transformations": [
+				{
+					"name": "cleaningmovies"
+				}
+			],
 			"scriptLines": [
 				"source(output(",
 				"          movieId as string,",
@@ -22,7 +26,8 @@
 				"     ),",
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
-				"     ignoreNoFilesFound: false) ~> moviesrc"
+				"     ignoreNoFilesFound: false) ~> moviesrc",
+				"moviesrc derive(titlenew = toStirng(left(title,length(title)-6))) ~> cleaningmovies"
 			]
 		}
 	}
