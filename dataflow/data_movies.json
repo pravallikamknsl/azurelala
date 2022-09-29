@@ -70,7 +70,6 @@
 				"          movieId,",
 				"          title = moviesrc@title,",
 				"          genres = moviesrc@genres,",
-				"          titlenew,",
 				"          movie,",
 				"          genres = moviesdbsrc@genres,",
 				"          year,",
