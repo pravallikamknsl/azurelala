@@ -19,11 +19,21 @@
 						"type": "DatasetReference"
 					},
 					"name": "outputsplit"
+				},
+				{
+					"dataset": {
+						"referenceName": "movies_blob",
+						"type": "DatasetReference"
+					},
+					"name": "outputcount"
 				}
 			],
 			"transformations": [
 				{
 					"name": "splitderive"
+				},
+				{
+					"name": "aggregate1"
 				}
 			],
 			"scriptLines": [
@@ -37,6 +47,8 @@
 				"     ignoreNoFilesFound: false) ~> moviesv1",
 				"moviesv1 derive(title = toString(left(title,length(title)-6)),",
 				"          year = toInteger(trim(right(title,6),'()'))) ~> splitderive",
+				"splitderive aggregate(groupBy(year),",
+				"     moviescount = count(year)) ~> aggregate1",
 				"splitderive sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
@@ -47,7 +59,18 @@
 				"     partitionFileNames:['splityearname.csv'],",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
-				"     partitionBy('hash', 1)) ~> outputsplit"
+				"     partitionBy('hash', 1)) ~> outputsplit",
+				"aggregate1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          movieId as string,",
+				"          title as string,",
+				"          genres as string",
+				"     ),",
+				"     partitionFileNames:['countofmovies.csv'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> outputcount"
 			]
 		}
 	}
