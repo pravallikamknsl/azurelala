@@ -1,0 +1,54 @@
+{
+	"name": "aggregate_derive",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "movies_blob",
+						"type": "DatasetReference"
+					},
+					"name": "moviesv1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "movies_blob",
+						"type": "DatasetReference"
+					},
+					"name": "outputsplit"
+				}
+			],
+			"transformations": [
+				{
+					"name": "splitderive"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          movieId as string,",
+				"          title as string,",
+				"          genres as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> moviesv1",
+				"moviesv1 derive(title = toString(left(title,length(title)-6)),",
+				"          year = toInteger(trim(right(title,6),'()'))) ~> splitderive",
+				"splitderive sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          movieId as string,",
+				"          title as string,",
+				"          genres as string",
+				"     ),",
+				"     partitionFileNames:['splityearname.csv'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> outputsplit"
+			]
+		}
+	}
+}
