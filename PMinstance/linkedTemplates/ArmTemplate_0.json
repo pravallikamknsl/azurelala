@@ -162,7 +162,7 @@
 				"typeProperties": {
 					"location": {
 						"type": "AzureBlobStorageLocation",
-						"fileName": "movies.csv",
+						"fileName": "movies_v1.csv",
 						"container": "sourceinput"
 					},
 					"columnDelimiter": ",",
@@ -390,6 +390,88 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/aggregate_derive')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "movies_blob",
+								"type": "DatasetReference"
+							},
+							"name": "moviesv1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "movies_blob",
+								"type": "DatasetReference"
+							},
+							"name": "outputsplit"
+						},
+						{
+							"dataset": {
+								"referenceName": "movies_blob",
+								"type": "DatasetReference"
+							},
+							"name": "outputcount"
+						}
+					],
+					"transformations": [
+						{
+							"name": "splitderive"
+						},
+						{
+							"name": "aggregate1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          movieId as string,",
+						"          title as string,",
+						"          genres as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> moviesv1",
+						"moviesv1 derive(title = toString(left(title,length(title)-6)),",
+						"          year = toInteger(trim(right(title,6),'()'))) ~> splitderive",
+						"splitderive aggregate(groupBy(year),",
+						"     moviescount = count(year)) ~> aggregate1",
+						"splitderive sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          movieId as string,",
+						"          title as string,",
+						"          genres as string",
+						"     ),",
+						"     partitionFileNames:['splityearname.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> outputsplit",
+						"aggregate1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          movieId as string,",
+						"          title as string,",
+						"          genres as string",
+						"     ),",
+						"     partitionFileNames:['countofmovies.csv'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> outputcount"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/movies_blob')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/data_movies')]",
 			"type": "Microsoft.DataFactory/factories/dataflows",
 			"apiVersion": "2018-06-01",
@@ -484,6 +566,54 @@
 				"[concat(variables('factoryId'), '/datasets/movies_blob')]",
 				"[concat(variables('factoryId'), '/datasets/moviesdb_blob')]",
 				"[concat(variables('factoryId'), '/datasets/moviesoutput')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/aggregatepipe')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Data flow1",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "aggregate_derive",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"moviesv1": {},
+									"outputsplit": {},
+									"outputcount": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 16,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/aggregate_derive')]"
 			]
 		},
 		{
