@@ -62,7 +62,7 @@
 				"     ignoreNoFilesFound: false) ~> moviesdbsrc",
 				"moviesrc derive(titleNew = toString((left(title,length(title)-6)))) ~> cleaningmovies",
 				"cleaningmovies, moviesdbsrc join(titleNew == moviesdbsrc@title,",
-				"     joinType:'left',",
+				"     joinType:'right',",
 				"     matchType:'exact',",
 				"     ignoreSpaces: false,",
 				"     broadcast: 'auto')~> joinmovies",
@@ -80,7 +80,7 @@
 				"     skipDuplicateMapOutputs: true) ~> select1",
 				"select1 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
-				"     partitionFileNames:['movies_output'],",
+				"     partitionFileNames:['moviesoutput'],",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
 				"     partitionBy('hash', 1)) ~> moviesoutput"
