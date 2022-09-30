@@ -498,14 +498,14 @@
 					"sinks": [
 						{
 							"dataset": {
-								"referenceName": "movies_blob",
+								"referenceName": "moviesoutput",
 								"type": "DatasetReference"
 							},
 							"name": "outputsplit"
 						},
 						{
 							"dataset": {
-								"referenceName": "movies_blob",
+								"referenceName": "moviesoutput",
 								"type": "DatasetReference"
 							},
 							"name": "outputcount"
@@ -534,22 +534,12 @@
 						"     moviescount = count(year)) ~> aggregate1",
 						"splitderive sink(allowSchemaDrift: true,",
 						"     validateSchema: false,",
-						"     input(",
-						"          movieId as string,",
-						"          title as string,",
-						"          genres as string",
-						"     ),",
 						"     partitionFileNames:['splityearname.csv'],",
 						"     skipDuplicateMapInputs: true,",
 						"     skipDuplicateMapOutputs: true,",
 						"     partitionBy('hash', 1)) ~> outputsplit",
 						"aggregate1 sink(allowSchemaDrift: true,",
 						"     validateSchema: false,",
-						"     input(",
-						"          movieId as string,",
-						"          title as string,",
-						"          genres as string",
-						"     ),",
 						"     partitionFileNames:['countofmovies.csv'],",
 						"     skipDuplicateMapInputs: true,",
 						"     skipDuplicateMapOutputs: true,",
@@ -558,7 +548,8 @@
 				}
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/movies_blob')]"
+				"[concat(variables('factoryId'), '/datasets/movies_blob')]",
+				"[concat(variables('factoryId'), '/datasets/moviesoutput')]"
 			]
 		},
 		{
