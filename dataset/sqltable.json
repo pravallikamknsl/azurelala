@@ -5,6 +5,14 @@
 			"referenceName": "AzureSqlDBPM",
 			"type": "LinkedServiceReference"
 		},
+		"parameters": {
+			"table_name": {
+				"type": "string"
+			},
+			"schemaname": {
+				"type": "string"
+			}
+		},
 		"annotations": [],
 		"type": "AzureSqlTable",
 		"schema": [],
