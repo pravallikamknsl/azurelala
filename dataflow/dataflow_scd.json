@@ -98,6 +98,7 @@
 				"     insertable:false,",
 				"     updateable:false,",
 				"     upsertable:true,",
+				"     keys:['CustomerID'],",
 				"     format: 'table',",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
