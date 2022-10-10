@@ -25,7 +25,11 @@
 						"referenceName": "Dimcustomer",
 						"type": "DatasetReference"
 					},
-					"name": "sinkTarget"
+					"name": "sinkTarget",
+					"rejectedDataLinkedService": {
+						"referenceName": "pmbloblinkedservice",
+						"type": "LinkedServiceReference"
+					}
 				}
 			],
 			"transformations": [
