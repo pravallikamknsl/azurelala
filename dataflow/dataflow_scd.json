@@ -19,7 +19,15 @@
 					"name": "Dimcustomer"
 				}
 			],
-			"sinks": [],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "Dimcustomer",
+						"type": "DatasetReference"
+					},
+					"name": "sinkTarget"
+				}
+			],
 			"transformations": [
 				{
 					"name": "Createhashkey"
@@ -31,7 +39,10 @@
 					"name": "lookupCustomerId"
 				},
 				{
-					"name": "derivedColumn1"
+					"name": "setdates"
+				},
+				{
+					"name": "Upset"
 				}
 			],
 			"scriptLines": [
@@ -79,7 +90,18 @@
 				"     pickup: 'any',",
 				"     broadcast: 'auto')~> lookupCustomerId",
 				"lookupCustomerId derive(InsertedDate = iif(isNull(InsertedDate), currentTimestamp(), InsertedDate),",
-				"          ModifiedDate = currentTimestamp()) ~> derivedColumn1"
+				"          ModifiedDate = currentTimestamp()) ~> setdates",
+				"setdates alterRow(upsertIf(true())) ~> Upset",
+				"Upset sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sinkTarget"
 			]
 		}
 	}
