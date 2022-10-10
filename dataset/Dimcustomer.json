@@ -1,0 +1,12 @@
+{
+	"name": "Dimcustomer",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDBPM",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": []
+	}
+}
