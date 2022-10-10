@@ -1,0 +1,86 @@
+{
+	"name": "dataflow_scd",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Customersource",
+						"type": "DatasetReference"
+					},
+					"name": "customerSource"
+				},
+				{
+					"dataset": {
+						"referenceName": "Dimcustomer",
+						"type": "DatasetReference"
+					},
+					"name": "Dimcustomer"
+				}
+			],
+			"sinks": [],
+			"transformations": [
+				{
+					"name": "Createhashkey"
+				},
+				{
+					"name": "exist"
+				},
+				{
+					"name": "lookupCustomerId"
+				},
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          CustomerID as integer,",
+				"          Title as string,",
+				"          FirstName as string,",
+				"          MiddleName as string,",
+				"          LastName as string,",
+				"          Suffix as string,",
+				"          CompanyName as string,",
+				"          SalesPerson as string,",
+				"          EmailAddress as string,",
+				"          Phone as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> customerSource",
+				"source(output(",
+				"          CustomerID as integer,",
+				"          Title as string,",
+				"          FirstName as string,",
+				"          MiddleName as string,",
+				"          LastName as string,",
+				"          Suffix as string,",
+				"          CompanyName as string,",
+				"          SalesPerson as string,",
+				"          EmailAddress as string,",
+				"          Phone as string,",
+				"          InsertedDate as timestamp,",
+				"          ModifiedDate as timestamp,",
+				"          HashKey as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> Dimcustomer",
+				"customerSource derive(HashKey = sha2(256, iifNull(Title,'') +iifNull(FirstName, '') +iifNull(MiddleName,'') +iifNull(LastName, '') +iifNull(Suffix,'') +iifNull(CompanyName,'') +iifNull(SalesPerson,'') +iifNull(EmailAddress,'') +iifNull(Phone,''))) ~> Createhashkey",
+				"Createhashkey, Dimcustomer exists(Createhashkey@HashKey == Dimcustomer@HashKey,",
+				"     negate:true,",
+				"     broadcast: 'auto')~> exist",
+				"exist, Dimcustomer lookup(customerSource@CustomerID == Dimcustomer@CustomerID,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookupCustomerId",
+				"lookupCustomerId derive(InsertedDate = iif(isNull(InsertedDate), currentTimestamp(), InsertedDate),",
+				"          ModifiedDate = currentTimestamp()) ~> derivedColumn1"
+			]
+		}
+	}
+}
