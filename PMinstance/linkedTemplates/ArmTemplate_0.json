@@ -96,6 +96,90 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/Customersource')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDBPM",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "CustomerID",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "Title",
+						"type": "nvarchar"
+					},
+					{
+						"name": "FirstName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "MiddleName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "LastName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Suffix",
+						"type": "nvarchar"
+					},
+					{
+						"name": "CompanyName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "SalesPerson",
+						"type": "nvarchar"
+					},
+					{
+						"name": "EmailAddress",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Phone",
+						"type": "nvarchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "CustomerSource"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDBPM')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Dimcustomer')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDBPM",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "dim_customer"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDBPM')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/cars_blob')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -167,7 +251,10 @@
 				"typeProperties": {
 					"location": {
 						"type": "AzureBlobStorageLocation",
-						"fileName": "@dataset().filename",
+						"fileName": {
+							"value": "@dataset().filename",
+							"type": "Expression"
+						},
 						"container": "output"
 					},
 					"columnDelimiter": ",",
@@ -795,6 +882,152 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/dataflow_scd')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "Customersource",
+								"type": "DatasetReference"
+							},
+							"name": "customerSource"
+						},
+						{
+							"dataset": {
+								"referenceName": "Dimcustomer",
+								"type": "DatasetReference"
+							},
+							"name": "Dimcustomer"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "Dimcustomer",
+								"type": "DatasetReference"
+							},
+							"name": "sinkTarget",
+							"rejectedDataLinkedService": {
+								"referenceName": "pmbloblinkedservice",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"transformations": [
+						{
+							"name": "Createhashkey"
+						},
+						{
+							"name": "exist"
+						},
+						{
+							"name": "lookupCustomerId"
+						},
+						{
+							"name": "setdates"
+						},
+						{
+							"name": "Upset"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          CustomerID as integer,",
+						"          Title as string,",
+						"          FirstName as string,",
+						"          MiddleName as string,",
+						"          LastName as string,",
+						"          Suffix as string,",
+						"          CompanyName as string,",
+						"          SalesPerson as string,",
+						"          EmailAddress as string,",
+						"          Phone as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> customerSource",
+						"source(output(",
+						"          CustomerID as integer,",
+						"          Title as string,",
+						"          FirstName as string,",
+						"          MiddleName as string,",
+						"          LastName as string,",
+						"          Suffix as string,",
+						"          CompanyName as string,",
+						"          SalesPerson as string,",
+						"          EmailAddress as string,",
+						"          Phone as string,",
+						"          InsertedDate as timestamp,",
+						"          ModifiedDate as timestamp,",
+						"          HashKey as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> Dimcustomer",
+						"customerSource derive(HashKey = sha2(256, iifNull(Title,'') +iifNull(FirstName, '') +iifNull(MiddleName,'') +iifNull(LastName, '') +iifNull(Suffix,'') +iifNull(CompanyName,'') +iifNull(SalesPerson,'') +iifNull(EmailAddress,'') +iifNull(Phone,''))) ~> Createhashkey",
+						"Createhashkey, Dimcustomer exists(Createhashkey@HashKey == Dimcustomer@HashKey,",
+						"     negate:true,",
+						"     broadcast: 'auto')~> exist",
+						"exist, Dimcustomer lookup(customerSource@CustomerID == Dimcustomer@CustomerID,",
+						"     multiple: false,",
+						"     pickup: 'any',",
+						"     broadcast: 'auto')~> lookupCustomerId",
+						"lookupCustomerId derive(InsertedDate = iif(isNull(InsertedDate), currentTimestamp(), InsertedDate),",
+						"          ModifiedDate = currentTimestamp()) ~> setdates",
+						"setdates alterRow(upsertIf(true())) ~> Upset",
+						"Upset sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     deletable:false,",
+						"     insertable:false,",
+						"     updateable:false,",
+						"     upsertable:true,",
+						"     keys:['CustomerID'],",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          CustomerID = customerSource@CustomerID,",
+						"          Title = customerSource@Title,",
+						"          FirstName = customerSource@FirstName,",
+						"          MiddleName = customerSource@MiddleName,",
+						"          LastName = customerSource@LastName,",
+						"          Suffix = customerSource@Suffix,",
+						"          CompanyName = customerSource@CompanyName,",
+						"          SalesPerson = customerSource@SalesPerson,",
+						"          EmailAddress = customerSource@EmailAddress,",
+						"          Phone = customerSource@Phone,",
+						"          HashKey = Createhashkey@HashKey,",
+						"          CustomerID = Dimcustomer@CustomerID,",
+						"          Title = Dimcustomer@Title,",
+						"          FirstName = Dimcustomer@FirstName,",
+						"          MiddleName = Dimcustomer@MiddleName,",
+						"          LastName = Dimcustomer@LastName,",
+						"          Suffix = Dimcustomer@Suffix,",
+						"          CompanyName = Dimcustomer@CompanyName,",
+						"          SalesPerson = Dimcustomer@SalesPerson,",
+						"          EmailAddress = Dimcustomer@EmailAddress,",
+						"          Phone = Dimcustomer@Phone,",
+						"          InsertedDate,",
+						"          ModifiedDate,",
+						"          HashKey = Dimcustomer@HashKey",
+						"     )) ~> sinkTarget"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/Customersource')]",
+				"[concat(variables('factoryId'), '/datasets/Dimcustomer')]",
+				"[concat(variables('factoryId'), '/linkedServices/pmbloblinkedservice')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/aggregatepipe')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
@@ -840,55 +1073,6 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/dataflows/aggregate_derive')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/pipeouts')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"activities": [
-					{
-						"name": "title output",
-						"description": "Data transform title output",
-						"type": "ExecuteDataFlow",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"dataflow": {
-								"referenceName": "data_movies",
-								"type": "DataFlowReference",
-								"parameters": {},
-								"datasetParameters": {
-									"moviesrc": {},
-									"moviesdbsrc": {},
-									"moviesoutput": {}
-								}
-							},
-							"staging": {},
-							"compute": {
-								"coreCount": 8,
-								"computeType": "General"
-							},
-							"traceLevel": "Fine"
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {},
-					"cancelAfter": {}
-				},
-				"annotations": []
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/dataflows/data_movies')]"
 			]
 		}
 	]
